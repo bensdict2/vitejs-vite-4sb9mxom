@@ -62,9 +62,10 @@ export default function App() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [studentName, setStudentName] = useState("");
-  
-  // State to hold the 5 randomly selected equations for this student
   const [randomTypingEqs, setRandomTypingEqs] = useState([]);
+  
+  // NEW: Tracks the history of atom counts for the strikethrough effect
+  const [atomHistory, setAtomHistory] = useState({});
 
   const sendLiveUpdate = async (statusMessage) => {
     if (!studentName.trim()) return;
@@ -79,12 +80,9 @@ export default function App() {
   };
 
   const startTraining = () => {
-    // 1. Send status
     sendLiveUpdate("Started App");
-    // 2. Shuffle the master pool and pick 5 unique equations
     const shuffledPool = [...typingPool].sort(() => 0.5 - Math.random());
     setRandomTypingEqs(shuffledPool.slice(0, 5));
-    // 3. Move to first stage
     setStage(STAGES.BASICS);
   };
 
@@ -92,13 +90,14 @@ export default function App() {
     setShowSuccess(false);
     setFeedback("");
     setCoefficients([1, 1, 1, 1]);
+    setAtomHistory({}); // Clear history for the new equation
 
     let maxLevel = 0;
     if (stage === STAGES.BASICS) maxLevel = basicsQuiz.length - 1;
     if (stage === STAGES.COUNTING) maxLevel = countingQuiz.length - 1;
     if (stage === STAGES.SCALES) maxLevel = equations.scales.length - 1;
     if (stage === STAGES.TCHART) maxLevel = equations.tchart.length - 1;
-    if (stage === STAGES.TYPING) maxLevel = randomTypingEqs.length - 1; // Uses the 5 random equations
+    if (stage === STAGES.TYPING) maxLevel = randomTypingEqs.length - 1; 
 
     if (level < maxLevel) {
       setLevel(level + 1);
@@ -133,6 +132,51 @@ export default function App() {
     }
     return molecule.symbol === element ? molecule.sub * coeff : 0;
   };
+
+  // Helper hook to update the strikethrough history whenever coefficients change
+  useEffect(() => {
+    if (stage !== STAGES.TCHART && stage !== STAGES.TYPING) return;
+    
+    const currentData = stage === STAGES.TYPING ? randomTypingEqs : equations.tchart;
+    if (!currentData || !currentData[level]) return;
+    
+    const q = currentData[level];
+    const newLeft = {};
+    const newRight = {};
+    
+    q.elements.forEach(el => { 
+      newLeft[el] = getAtomCount(q.reactants[0], coefficients[0], el) + getAtomCount(q.reactants[1], coefficients[1], el);
+      newRight[el] = getAtomCount(q.products[0], coefficients[2], el) + getAtomCount(q.products[1], coefficients[3], el);
+    });
+
+    setAtomHistory(prev => {
+      let hasChange = false;
+      const nextHistory = { ...prev };
+      
+      if (Object.keys(nextHistory).length === 0) {
+          q.elements.forEach(el => {
+              nextHistory[el] = { left: [newLeft[el]], right: [newRight[el]] };
+          });
+          return nextHistory;
+      }
+
+      q.elements.forEach(el => {
+          if (!nextHistory[el]) nextHistory[el] = { left: [], right: [] };
+          
+          const lArr = nextHistory[el].left;
+          if (lArr[lArr.length - 1] !== newLeft[el]) {
+              nextHistory[el] = { ...nextHistory[el], left: [...lArr, newLeft[el]] };
+              hasChange = true;
+          }
+          const rArr = nextHistory[el].right;
+          if (rArr[rArr.length - 1] !== newRight[el]) {
+              nextHistory[el] = { ...nextHistory[el], right: [...rArr, newRight[el]] };
+              hasChange = true;
+          }
+      });
+      return hasChange ? nextHistory : prev;
+    });
+  }, [coefficients, level, stage, randomTypingEqs]);
 
   const renderCardButton = (index, data, mode) => {
     if (!data) return null;
@@ -169,7 +213,6 @@ export default function App() {
   };
 
   const renderBalancer = (mode, eqData) => {
-    // Select the correct data source (Static vs Randomized)
     const currentData = mode === 'typing' ? randomTypingEqs : eqData;
     const q = currentData[level];
     
@@ -181,7 +224,6 @@ export default function App() {
       rightAtoms[el] = getAtomCount(q.products[0], coefficients[2], el) + getAtomCount(q.products[1], coefficients[3], el);
     });
 
-    // Dynamic balance check ensuring ALL required target coefficients match to prevent un-reduced answers
     const isBalanced = q.elements.every(el => leftAtoms[el] === rightAtoms[el]) && 
                        q.target.every((val, index) => val === coefficients[index]);
 
@@ -210,7 +252,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* MODE: SCALES */}
+        {/* SCALES MODE */}
         {mode === 'scales' && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap' }}>
             {q.elements.map(el => {
@@ -236,9 +278,9 @@ export default function App() {
           </div>
         )}
 
-        {/* MODE: T-CHART */}
-        {mode === 'tchart' && (
-          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', maxWidth: '400px', margin: '0 auto', border: '2px solid #e2e8f0' }}>
+        {/* T-CHART AND TYPING MODE (History Strikethrough Logic) */}
+        {(mode === 'tchart' || mode === 'typing') && (
+          <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', maxWidth: '400px', margin: '0 auto', border: '2px solid #e2e8f0', marginTop: mode === 'typing' ? '24px' : '0' }}>
             <table style={{ width: '100%', textAlign: 'center', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '4px solid #1e293b' }}>
@@ -250,11 +292,36 @@ export default function App() {
               <tbody>
                 {q.elements.map(el => {
                   const match = leftAtoms[el] === rightAtoms[el];
+                  
+                  // Disable the green highlight entirely if we are in typing mode to prevent them from relying on it
+                  const isGreenHighlight = match && mode !== 'typing'; 
+                  
+                  const history = atomHistory[el] || { left: [leftAtoms[el]], right: [rightAtoms[el]] };
+
+                  // Helper function to render the crossed-out history list
+                  const renderHistoryList = (arr) => (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px' }}>
+                      {arr.map((val, idx) => {
+                        const isLast = idx === arr.length - 1;
+                        return (
+                          <span key={idx} style={{
+                            textDecoration: isLast ? 'none' : 'line-through',
+                            color: isLast ? (isGreenHighlight ? '#16a34a' : '#1e293b') : '#94a3b8',
+                            fontWeight: isLast && isGreenHighlight ? 'bold' : 'normal',
+                            fontSize: '24px'
+                          }}>
+                            {val}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+
                   return (
-                    <tr key={el} style={{ backgroundColor: match ? '#f0fdf4' : 'transparent', transition: 'background-color 0.3s' }}>
-                      <td style={{ padding: '16px 0', fontSize: '24px', fontWeight: match ? 'bold' : 'normal', color: match ? '#16a34a' : '#1e293b' }}>{leftAtoms[el]}</td>
+                    <tr key={el} style={{ backgroundColor: isGreenHighlight ? '#f0fdf4' : 'transparent', transition: 'background-color 0.3s' }}>
+                      <td style={{ padding: '16px 0' }}>{renderHistoryList(history.left)}</td>
                       <td style={{ padding: '16px 0', backgroundColor: '#f8fafc', borderLeft: '2px solid #e2e8f0', borderRight: '2px solid #e2e8f0', fontWeight: 'bold', fontSize: '20px' }}>{el}</td>
-                      <td style={{ padding: '16px 0', fontSize: '24px', fontWeight: match ? 'bold' : 'normal', color: match ? '#16a34a' : '#1e293b' }}>{rightAtoms[el]}</td>
+                      <td style={{ padding: '16px 0' }}>{renderHistoryList(history.right)}</td>
                     </tr>
                   );
                 })}
@@ -267,7 +334,7 @@ export default function App() {
         {mode === 'typing' && (
            <div style={{ textAlign: 'center', marginTop: '24px' }}>
              <button 
-                onClick={() => isBalanced ? setShowSuccess(true) : setFeedback("Not balanced yet. Did you reduce your coefficients?")}
+                onClick={() => isBalanced ? setShowSuccess(true) : setFeedback("Not balanced yet. Check your totals, or make sure your coefficients can't be reduced!")}
                 style={{ backgroundColor: '#1e293b', color: '#ffffff', fontWeight: 'bold', padding: '16px 48px', borderRadius: '999px', fontSize: '20px', border: 'none', cursor: 'pointer' }}>
                 Check Answer
              </button>
