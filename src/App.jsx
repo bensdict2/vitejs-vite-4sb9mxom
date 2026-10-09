@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 // Native SVG Checkmark
 const CheckIcon = ({ className, style }) => (
@@ -36,12 +36,24 @@ const equations = {
   tchart: [
     { reactants: [{ symbol: 'N', sub: 2, label: 'N₂' }, { symbol: 'H', sub: 2, label: 'H₂' }], products: [{ parts: [{ symbol: 'N', sub: 1 }, { symbol: 'H', sub: 3 }], label: 'NH₃' }], target: [1, 3, 2], elements: ['N', 'H'] },
     { reactants: [{ symbol: 'Mg', sub: 1, label: 'Mg' }, { symbol: 'Cl', sub: 2, label: 'Cl₂' }], products: [{ parts: [{ symbol: 'Mg', sub: 1 }, { symbol: 'Cl', sub: 2 }], label: 'MgCl₂' }], target: [1, 1, 1], elements: ['Mg', 'Cl'] }
-  ],
-  typing: [
-    { reactants: [{ symbol: 'K', sub: 1, label: 'K' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'K', sub: 2 }, { symbol: 'O', sub: 1 }], label: 'K₂O' }], target: [4, 1, 2], elements: ['K', 'O'] },
-    { reactants: [{ symbol: 'C', sub: 1, label: 'C' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'C', sub: 1 }, { symbol: 'O', sub: 2 }], label: 'CO₂' }], target: [1, 1, 1], elements: ['C', 'O'] }
   ]
 };
+
+// MASTER POOL for Independent Practice
+const typingPool = [
+  { reactants: [{ symbol: 'K', sub: 1, label: 'K' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'K', sub: 2 }, { symbol: 'O', sub: 1 }], label: 'K₂O' }], target: [4, 1, 2], elements: ['K', 'O'] },
+  { reactants: [{ symbol: 'C', sub: 1, label: 'C' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'C', sub: 1 }, { symbol: 'O', sub: 2 }], label: 'CO₂' }], target: [1, 1, 1], elements: ['C', 'O'] },
+  { reactants: [{ symbol: 'Li', sub: 1, label: 'Li' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'Li', sub: 2 }, { symbol: 'O', sub: 1 }], label: 'Li₂O' }], target: [4, 1, 2], elements: ['Li', 'O'] },
+  { reactants: [{ symbol: 'Mg', sub: 1, label: 'Mg' }, { symbol: 'N', sub: 2, label: 'N₂' }], products: [{ parts: [{ symbol: 'Mg', sub: 3 }, { symbol: 'N', sub: 2 }], label: 'Mg₃N₂' }], target: [3, 1, 1], elements: ['Mg', 'N'] },
+  { reactants: [{ symbol: 'H', sub: 2, label: 'H₂' }, { symbol: 'Cl', sub: 2, label: 'Cl₂' }], products: [{ parts: [{ symbol: 'H', sub: 1 }, { symbol: 'Cl', sub: 1 }], label: 'HCl' }], target: [1, 1, 2], elements: ['H', 'Cl'] },
+  { reactants: [{ symbol: 'Al', sub: 1, label: 'Al' }, { symbol: 'Cl', sub: 2, label: 'Cl₂' }], products: [{ parts: [{ symbol: 'Al', sub: 1 }, { symbol: 'Cl', sub: 3 }], label: 'AlCl₃' }], target: [2, 3, 2], elements: ['Al', 'Cl'] },
+  { reactants: [{ symbol: 'Ca', sub: 1, label: 'Ca' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'Ca', sub: 1 }, { symbol: 'O', sub: 1 }], label: 'CaO' }], target: [2, 1, 2], elements: ['Ca', 'O'] },
+  { reactants: [{ symbol: 'Ba', sub: 1, label: 'Ba' }, { symbol: 'N', sub: 2, label: 'N₂' }], products: [{ parts: [{ symbol: 'Ba', sub: 3 }, { symbol: 'N', sub: 2 }], label: 'Ba₃N₂' }], target: [3, 1, 1], elements: ['Ba', 'N'] },
+  { reactants: [{ symbol: 'P', sub: 4, label: 'P₄' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'P', sub: 2 }, { symbol: 'O', sub: 5 }], label: 'P₂O₅' }], target: [1, 5, 2], elements: ['P', 'O'] },
+  { reactants: [{ symbol: 'S', sub: 8, label: 'S₈' }, { symbol: 'O', sub: 2, label: 'O₂' }], products: [{ parts: [{ symbol: 'S', sub: 1 }, { symbol: 'O', sub: 3 }], label: 'SO₃' }], target: [1, 12, 8], elements: ['S', 'O'] },
+  { reactants: [{ symbol: 'N', sub: 2, label: 'N₂' }, { symbol: 'H', sub: 2, label: 'H₂' }], products: [{ parts: [{ symbol: 'N', sub: 1 }, { symbol: 'H', sub: 3 }], label: 'NH₃' }], target: [1, 3, 2], elements: ['N', 'H'] },
+  { reactants: [{ symbol: 'Na', sub: 1, label: 'Na' }, { symbol: 'Br', sub: 2, label: 'Br₂' }], products: [{ parts: [{ symbol: 'Na', sub: 1 }, { symbol: 'Br', sub: 1 }], label: 'NaBr' }], target: [2, 1, 2], elements: ['Na', 'Br'] }
+];
 
 export default function App() {
   const [stage, setStage] = useState(STAGES.INTRO);
@@ -50,6 +62,9 @@ export default function App() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [studentName, setStudentName] = useState("");
+  
+  // State to hold the 5 randomly selected equations for this student
+  const [randomTypingEqs, setRandomTypingEqs] = useState([]);
 
   const sendLiveUpdate = async (statusMessage) => {
     if (!studentName.trim()) return;
@@ -63,6 +78,16 @@ export default function App() {
     } catch (error) { console.error("Tracking error", error); }
   };
 
+  const startTraining = () => {
+    // 1. Send status
+    sendLiveUpdate("Started App");
+    // 2. Shuffle the master pool and pick 5 unique equations
+    const shuffledPool = [...typingPool].sort(() => 0.5 - Math.random());
+    setRandomTypingEqs(shuffledPool.slice(0, 5));
+    // 3. Move to first stage
+    setStage(STAGES.BASICS);
+  };
+
   const proceed = () => {
     setShowSuccess(false);
     setFeedback("");
@@ -73,7 +98,7 @@ export default function App() {
     if (stage === STAGES.COUNTING) maxLevel = countingQuiz.length - 1;
     if (stage === STAGES.SCALES) maxLevel = equations.scales.length - 1;
     if (stage === STAGES.TCHART) maxLevel = equations.tchart.length - 1;
-    if (stage === STAGES.TYPING) maxLevel = equations.typing.length - 1;
+    if (stage === STAGES.TYPING) maxLevel = randomTypingEqs.length - 1; // Uses the 5 random equations
 
     if (level < maxLevel) {
       setLevel(level + 1);
@@ -117,7 +142,7 @@ export default function App() {
           <input 
             type="number" 
             min="1" 
-            value={coefficients[index]} 
+            value={coefficients[index] || 1} 
             onChange={(e) => {
               let newC = [...coefficients];
               newC[index] = Number(e.target.value) || 1;
@@ -137,8 +162,17 @@ export default function App() {
     );
   };
 
+  const getBalancedString = (q, coeffs) => {
+    let left = q.reactants.map((r, i) => `${coeffs[i]}${r.label}`).join(' + ');
+    let right = q.products.map((p, i) => `${coeffs[i + q.reactants.length]}${p.label}`).join(' + ');
+    return `${left} ➔ ${right}`;
+  };
+
   const renderBalancer = (mode, eqData) => {
-    const q = eqData[level];
+    // Select the correct data source (Static vs Randomized)
+    const currentData = mode === 'typing' ? randomTypingEqs : eqData;
+    const q = currentData[level];
+    
     const leftAtoms = {};
     const rightAtoms = {};
     
@@ -147,8 +181,9 @@ export default function App() {
       rightAtoms[el] = getAtomCount(q.products[0], coefficients[2], el) + getAtomCount(q.products[1], coefficients[3], el);
     });
 
+    // Dynamic balance check ensuring ALL required target coefficients match to prevent un-reduced answers
     const isBalanced = q.elements.every(el => leftAtoms[el] === rightAtoms[el]) && 
-                       q.target[0] === coefficients[0] && q.target[1] === coefficients[1] && q.target[2] === coefficients[2];
+                       q.target.every((val, index) => val === coefficients[index]);
 
     return (
       <div>
@@ -157,7 +192,7 @@ export default function App() {
             {mode === 'scales' && "Part 3: Visual Scales"}
             {mode === 'tchart' && "Part 4: The T-Chart"}
             {mode === 'typing' && "Part 5: Independent Practice"}
-            <span style={{ float: 'right' }}>Level {level + 1} of {eqData.length}</span>
+            <span style={{ float: 'right' }}>Level {level + 1} of {currentData.length}</span>
           </div>
         </div>
 
@@ -170,6 +205,8 @@ export default function App() {
           <div style={{ fontSize: '40px', fontWeight: '900', color: '#94a3b8' }}>➔</div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', backgroundColor: '#f8fafc', padding: '12px', borderRadius: '16px' }}>
              {renderCardButton(2, q.products[0], mode)}
+             {q.products[1] && <span style={{ fontSize: '32px', fontWeight: '900', color: '#94a3b8' }}>+</span>}
+             {q.products[1] && renderCardButton(3, q.products[1], mode)}
           </div>
         </div>
 
@@ -230,7 +267,7 @@ export default function App() {
         {mode === 'typing' && (
            <div style={{ textAlign: 'center', marginTop: '24px' }}>
              <button 
-                onClick={() => isBalanced ? setShowSuccess(true) : setFeedback("Not balanced yet. Double check your math!")}
+                onClick={() => isBalanced ? setShowSuccess(true) : setFeedback("Not balanced yet. Did you reduce your coefficients?")}
                 style={{ backgroundColor: '#1e293b', color: '#ffffff', fontWeight: 'bold', padding: '16px 48px', borderRadius: '999px', fontSize: '20px', border: 'none', cursor: 'pointer' }}>
                 Check Answer
              </button>
@@ -249,7 +286,7 @@ export default function App() {
           </div>
         )}
 
-        {showSuccess && renderSuccessModal(`${q.target[0]}${q.reactants[0].label} + ${q.target[1]}${q.reactants[1] ? q.reactants[1].label : ''} ➔ ${q.target[2]}${q.products[0].label}`)}
+        {showSuccess && renderSuccessModal(getBalancedString(q, q.target))}
       </div>
     );
   };
@@ -279,7 +316,7 @@ export default function App() {
               />
               <br/>
               <button 
-                onClick={() => { sendLiveUpdate("Started App"); setStage(STAGES.BASICS); }}
+                onClick={startTraining}
                 disabled={!studentName.trim()}
                 style={{ backgroundColor: studentName.trim() ? '#2563eb' : '#94a3b8', color: '#ffffff', fontWeight: 'bold', padding: '16px 48px', borderRadius: '999px', fontSize: '20px', border: 'none', cursor: studentName.trim() ? 'pointer' : 'not-allowed' }}>
                 Start Training ➔
